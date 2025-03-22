@@ -19,12 +19,12 @@ import nl.paultegelaar.rabbitmq.config.RabbitMQObjects;
 import nl.paultegelaar.rabbitmq.util.config.ApplicationConfig;
 import nl.paultegelaar.rabbitmq.util.exception.RabbitMQProvisioningException;
 
-public class TestRabbitMQAdminClient {
+class TestRabbitMQAdminClient {
 
 	WireMockServer wireMockServer = null;
 	ApplicationConfig applicationConfig = null;
 	RabbitMQAdminClient rabbitMQAdminClient = null;
-	static ObjectMapper OBJECTMAPPER = new ObjectMapper();
+	static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	
 	@BeforeEach
 	void init() throws RabbitMQProvisioningException {
@@ -53,8 +53,8 @@ public class TestRabbitMQAdminClient {
 	}
 	
 	@Test
-	void testHappyFlow() throws StreamReadException, DatabindException, IOException, RabbitMQProvisioningException, InterruptedException {
-		RabbitMQObjects rabbitMQObjects = OBJECTMAPPER.readValue(new File("src/test/resources/rabbitmq-test-config.json"), RabbitMQObjects.class);
+	void testHappyFlow() throws IOException {
+		RabbitMQObjects rabbitMQObjects = OBJECT_MAPPER.readValue(new File("src/test/resources/rabbitmq-test-config.json"), RabbitMQObjects.class);
 		
 		
 		

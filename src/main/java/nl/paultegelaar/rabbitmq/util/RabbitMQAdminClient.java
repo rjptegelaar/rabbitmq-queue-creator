@@ -16,7 +16,6 @@ import java.util.logging.Logger;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -41,7 +40,9 @@ import nl.paultegelaar.rabbitmq.util.exception.RabbitMQProvisioningException;
 
 public class RabbitMQAdminClient {
 
-	private final static Logger LOGGER = Logger.getLogger(RabbitMQAdminClient.class.getName());
+	private static final String CONTENT_TYPE_HEADER = "Content-Type";
+	private static final String AUTHORIZATION_HEADER = "Authorization";
+	private static final Logger LOGGER = Logger.getLogger(RabbitMQAdminClient.class.getName());
 	
 	private final ApplicationConfig applicationConfig;
 	private final CloseableHttpClient httpClient;
@@ -102,7 +103,7 @@ public class RabbitMQAdminClient {
 							
 							try {
 								LOGGER.info("Creating queue");
-								callRabbitMQManagementAPI(createQueueRequest(virtualHostName, queueName));
+								callRabbitMQManagementAPI(createQueueRequest(virtualHostName, queueName, exchangeName));
 								LOGGER.info("Creating dead letter queue");
 								callRabbitMQManagementAPI(createDeadLetterQueueRequest(virtualHostName, queueName));
 								LOGGER.info("Creating exchange");
@@ -110,13 +111,7 @@ public class RabbitMQAdminClient {
 								LOGGER.info("Creating binding");
 								//Use the same name for routing key and queue
 								callRabbitMQManagementAPI(createBindingRequest(virtualHostName, exchangeName, queueName, queueName));		
-							} catch (UnsupportedEncodingException e) {
-								throw new RabbitMQProvisioningException(e);
-							} catch (URISyntaxException e) {
-								throw new RabbitMQProvisioningException(e);
-							} catch (ClientProtocolException e) {
-								throw new RabbitMQProvisioningException(e);
-							} catch (IOException e) {
+							} catch (URISyntaxException|IOException e) {
 								throw new RabbitMQProvisioningException(e);
 							}
 					
@@ -127,7 +122,7 @@ public class RabbitMQAdminClient {
 		}							
 	}
 	
-	private void callRabbitMQManagementAPI(HttpUriRequest request) throws ClientProtocolException, IOException, RabbitMQProvisioningException {
+	private void callRabbitMQManagementAPI(HttpUriRequest request) throws IOException, RabbitMQProvisioningException {
 		LOGGER.info(String.format("Sending request to: %s", request.getURI().toString()));
 		
 		CloseableHttpResponse response = httpClient.execute(request);
@@ -192,7 +187,7 @@ public class RabbitMQAdminClient {
 	private String buildBasicAuthCredentials() {
 
 		// Encode username and password
-		String credentials = Base64.getEncoder().encodeToString((applicationConfig.getApiUsername() + ":" + applicationConfig.getApiPassword()).getBytes(StandardCharsets.UTF_8));
+		String credentials = Base64.getEncoder().encodeToString((applicationConfig.getApiUsername() + ":" + new String(applicationConfig.getApiPassword())).getBytes(StandardCharsets.UTF_8));
 
 		return "Basic ".concat(credentials);
 
@@ -207,8 +202,8 @@ public class RabbitMQAdminClient {
 
 		// Add headers
 		Map<String, String> headers = new HashMap<>();
-		headers.put("Authorization", buildBasicAuthCredentials());
-		headers.put("Content-Type", ContentType.APPLICATION_JSON.getMimeType());
+		headers.put(AUTHORIZATION_HEADER, buildBasicAuthCredentials());
+		headers.put(CONTENT_TYPE_HEADER, ContentType.APPLICATION_JSON.getMimeType());
 
 		// Build URL
 		URI fullUrl = createURL(applicationConfig.getApiBaseURL(), applicationConfig.getExchangePath(), URLEncoder.encode(virtualhostName, StandardCharsets.UTF_8), exchangeName);
@@ -217,22 +212,22 @@ public class RabbitMQAdminClient {
 		return createPutRequest(json.toString(), headers, fullUrl);
 	}
 	
-	private HttpUriRequest createQueueRequest(String virtualhost, String queueName) throws UnsupportedEncodingException, URISyntaxException {
+	private HttpUriRequest createQueueRequest(String virtualhost, String queueName, String exchangeName) throws UnsupportedEncodingException, URISyntaxException {
 
 		// Build main json message
 		JSONObject json = new JSONObject();
 		json.put("type", "fanout");
 		//Build arguments json object
 		JSONObject arguments = new JSONObject();
-		arguments.put("x-dead-letter-exchange", "");
+		arguments.put("x-dead-letter-exchange", exchangeName);
 		arguments.put("x-dead-letter-routing-key", queueName.concat(".dead-letter"));
 		//Add arguments to main json
 		json.put("arguments",  arguments);
 				
 		// Add headers
 		Map<String, String> headers = new HashMap<>();
-		headers.put("Authorization", buildBasicAuthCredentials());
-		headers.put("Content-Type", ContentType.APPLICATION_JSON.getMimeType());
+		headers.put(AUTHORIZATION_HEADER, buildBasicAuthCredentials());
+		headers.put(CONTENT_TYPE_HEADER, ContentType.APPLICATION_JSON.getMimeType());
 
 		// Build URL
 		URI fullUrl = createURL(applicationConfig.getApiBaseURL(), applicationConfig.getQueuePath(), URLEncoder.encode(virtualhost, StandardCharsets.UTF_8), URLEncoder.encode(queueName, StandardCharsets.UTF_8));
@@ -251,8 +246,8 @@ public class RabbitMQAdminClient {
 				
 		// Add headers
 		Map<String, String> headers = new HashMap<>();
-		headers.put("Authorization", buildBasicAuthCredentials());
-		headers.put("Content-Type", ContentType.APPLICATION_JSON.getMimeType());
+		headers.put(AUTHORIZATION_HEADER, buildBasicAuthCredentials());
+		headers.put(CONTENT_TYPE_HEADER, ContentType.APPLICATION_JSON.getMimeType());
 
 		// Build URL
 		URI fullUrl = createURL(applicationConfig.getApiBaseURL(), applicationConfig.getDeadLetterQueuePath(), URLEncoder.encode(virtualhost, StandardCharsets.UTF_8), URLEncoder.encode(queueName.concat(applicationConfig.getDeadLetterPostfix()), StandardCharsets.UTF_8) );
@@ -272,8 +267,8 @@ public class RabbitMQAdminClient {
 		
 		// Add headers
 		Map<String, String> headers = new HashMap<>();
-		headers.put("Authorization", buildBasicAuthCredentials());
-		headers.put("Content-Type", ContentType.APPLICATION_JSON.getMimeType());
+		headers.put(AUTHORIZATION_HEADER, buildBasicAuthCredentials());
+		headers.put(CONTENT_TYPE_HEADER, ContentType.APPLICATION_JSON.getMimeType());
 
 		// Build URL
 		URI fullUrl = createURL(applicationConfig.getApiBaseURL(), applicationConfig.getBindingPath(), URLEncoder.encode(virtualhostName, StandardCharsets.UTF_8), URLEncoder.encode(exchangeName, StandardCharsets.UTF_8), URLEncoder.encode(queueName, StandardCharsets.UTF_8));
