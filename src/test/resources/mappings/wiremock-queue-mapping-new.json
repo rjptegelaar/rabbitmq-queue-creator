@@ -1,0 +1,9 @@
+{
+    "request": {
+        "method": "PUT",
+        "url": "/api/queues/%2F/queue1"
+    },
+    "response": {
+        "status": 201
+    }
+}

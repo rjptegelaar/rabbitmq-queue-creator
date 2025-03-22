@@ -1,0 +1,58 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "javaType": "nl.paultegelaar.rabbitmq.config.RabbitMQObjects",
+    "type": "object",
+    "properties": {
+        "configName": {
+            "type": "string"
+        },
+        "virtualHosts": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/virtualHosts"
+            },
+            "minItems": 1
+        }
+    },
+    "required": [
+        "configName",
+        "virtualHosts"
+    ],
+    "definitions": {
+        "virtualHosts": {
+            "javaType": "nl.paultegelaar.rabbitmq.config.VirtualHost",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "bindings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/bindings"
+                    },
+                    "minItems": 1
+                }
+            }
+        },
+        "bindings": {
+            "javaType": "nl.paultegelaar.rabbitmq.config.Binding",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "queueName": {
+                    "type": "string"
+                },
+                "exchangeName": {
+                    "type": "string"
+                }
+            },
+
+            "required": [
+                "name", "queueName", "exchangeName"
+            ]
+        }
+    }
+}

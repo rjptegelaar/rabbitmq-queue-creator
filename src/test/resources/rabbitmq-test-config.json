@@ -1,0 +1,18 @@
+
+{
+    "configName": "Test config",
+    "virtualHosts": [{
+            "name": "/",
+            "bindings": [{
+                    "name": "test-binding1",
+                    "queueName": "queue1",
+                    "exchangeName": "amqp.default"
+                }, {
+                    "name": "test-binding2",
+                    "queueName": "queue2",
+                    "exchangeName": "amq.default"
+                }
+            ]
+        }
+    ]
+}
