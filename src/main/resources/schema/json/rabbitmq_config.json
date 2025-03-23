@@ -47,7 +47,10 @@
                 },
                 "exchangeName": {
                     "type": "string"
-                }
+            	},
+				"routingKey": {
+	                "type": "string"
+	            }
             },
 
             "required": [

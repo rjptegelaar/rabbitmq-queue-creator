@@ -10,7 +10,8 @@
                 }, {
                     "name": "test-binding2",
                     "queueName": "queue2",
-                    "exchangeName": "amq.default"
+                    "exchangeName": "amq.not.so.default",
+					"routingKey": "i.am.the.greatest.routing.key.ever"
                 }
             ]
         }

@@ -98,6 +98,8 @@ public class RabbitMQAdminClient {
 						if(StringUtils.isNoneBlank(binding.getExchangeName(), binding.getQueueName())) {														
 							String exchangeName = binding.getExchangeName();
 							String queueName = binding.getQueueName();
+							String routingkey = binding.getRoutingKey();
+							
 									
 							LOGGER.info(String.format("Processing binding for queue with name: %s and exchange with name %s", queueName, exchangeName));
 							
@@ -110,7 +112,7 @@ public class RabbitMQAdminClient {
 								callRabbitMQManagementAPI(createExchangeRequest(virtualHostName, exchangeName));
 								LOGGER.info("Creating binding");
 								//Use the same name for routing key and queue
-								callRabbitMQManagementAPI(createBindingRequest(virtualHostName, exchangeName, queueName, queueName));		
+								callRabbitMQManagementAPI(createBindingRequest(virtualHostName, exchangeName, queueName, StringUtils.defaultIfBlank(routingkey, queueName)));		
 							} catch (URISyntaxException|IOException e) {
 								throw new RabbitMQProvisioningException(e);
 							}
@@ -188,7 +190,6 @@ public class RabbitMQAdminClient {
 
 		// Encode username and password
 		String credentials = Base64.getEncoder().encodeToString((applicationConfig.getApiUsername() + ":" + new String(applicationConfig.getApiPassword())).getBytes(StandardCharsets.UTF_8));
-
 		return "Basic ".concat(credentials);
 
 	}
@@ -198,7 +199,6 @@ public class RabbitMQAdminClient {
 		// Build json message
 		JSONObject json = new JSONObject();
 		json.put("type", "fanout");
-		json.put("durable", true);
 
 		// Add headers
 		Map<String, String> headers = new HashMap<>();
@@ -216,7 +216,7 @@ public class RabbitMQAdminClient {
 
 		// Build main json message
 		JSONObject json = new JSONObject();
-		json.put("type", "fanout");
+		json.put("durable", true);
 		//Build arguments json object
 		JSONObject arguments = new JSONObject();
 		arguments.put("x-dead-letter-exchange", exchangeName);
@@ -276,6 +276,15 @@ public class RabbitMQAdminClient {
 		return createPostRequest(json.toString(), headers, fullUrl);
 	}
 	
+	/**
+	 * Create URL based on a baseURL a path and any parameters
+	 * 
+	 * @param baseURL
+	 * @param path
+	 * @param params 
+	 * @return URI
+	 * @throws URISyntaxException
+	 */
 	private URI createURL(String baseURL, String path, Object... params) throws URISyntaxException {					
 		URI fullUrl = new URI(baseURL.concat(String.format(path, params))); 
 		

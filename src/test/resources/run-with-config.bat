@@ -1,0 +1,1 @@
+call java -jar rabbitmq-queue-creator.jar -e "http://localhost:15672" -u guest -p guest -c "rabbitmq-test-config.json" 
