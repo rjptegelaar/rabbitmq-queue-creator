@@ -1,7 +1,7 @@
 {
     "request": {
         "method": "PUT",
-        "url": "/api/exchanges/%2F/amq.not.so.default"
+        "url": "/api/exchanges/%2F/amqp.not.so.default"
     },
     "response": {
         "status": 204

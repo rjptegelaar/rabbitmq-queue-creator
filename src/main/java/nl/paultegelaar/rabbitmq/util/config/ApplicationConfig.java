@@ -19,6 +19,7 @@ public class ApplicationConfig {
 	private String deadLetterQueuePath = "/api/queues/%s/%s";
 	private String bindingPath = "/api/bindings/%s/e/%s/q/%s";
 	private String deadLetterPostfix = ".dead-letter";
+	private String reservedExchangeNamePrefix = "amq.";
 	
 	
 	
@@ -116,6 +117,17 @@ public class ApplicationConfig {
 	public void setHttpRequestTimeout(int httpRequestTimeout) {
 		this.httpRequestTimeout = httpRequestTimeout;
 	}
+
+	@NotNull
+	public String getReservedExchangeNamePrefix() {
+		return reservedExchangeNamePrefix;
+	}
+
+	public void setReservedExchangeNamePrefix(String reservedExchangeNamePrefix) {
+		this.reservedExchangeNamePrefix = reservedExchangeNamePrefix;
+	}
+	
+	
 	
 	
 	

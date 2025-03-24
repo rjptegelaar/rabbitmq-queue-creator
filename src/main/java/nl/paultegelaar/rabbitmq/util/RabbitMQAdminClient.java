@@ -108,8 +108,14 @@ public class RabbitMQAdminClient {
 								callRabbitMQManagementAPI(createQueueRequest(virtualHostName, queueName, exchangeName));
 								LOGGER.info("Creating dead letter queue");
 								callRabbitMQManagementAPI(createDeadLetterQueueRequest(virtualHostName, queueName));
-								LOGGER.info("Creating exchange");
-								callRabbitMQManagementAPI(createExchangeRequest(virtualHostName, exchangeName));
+								
+								if(StringUtils.startsWithIgnoreCase(exchangeName, applicationConfig.getReservedExchangeNamePrefix())) {
+									LOGGER.info(String.format("Reserved exchange name, skipping create for: %s", exchangeName));
+								}else {
+									LOGGER.info("Creating exchange");
+									callRabbitMQManagementAPI(createExchangeRequest(virtualHostName, exchangeName));
+								}
+								
 								LOGGER.info("Creating binding");
 								//Use the same name for routing key and queue
 								callRabbitMQManagementAPI(createBindingRequest(virtualHostName, exchangeName, queueName, StringUtils.defaultIfBlank(routingkey, queueName)));		
