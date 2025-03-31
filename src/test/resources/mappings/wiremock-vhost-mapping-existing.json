@@ -1,0 +1,11 @@
+{
+    "request": {
+        "method": "GET",
+        "url": "/api/vhosts/%2F/"
+    },
+    "response": {
+        "status": 200,
+		"body": "{\"not\": \"important at all\"}"
+		
+    }
+}

@@ -21,6 +21,10 @@ import nl.paultegelaar.rabbitmq.util.exception.RabbitMQProvisioningException;
 
 public class RabbitMQObjectCreator {
 	
+	private static final String CONFIG_FILE_PROPERTY = "configFile";
+	private static final String PASSWORD_PROPERTY = "password";
+	private static final String USERNAME_PROPERTY = "username";
+	private static final String ENDPOINT_PROPERTY = "endpoint";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	
 
@@ -38,10 +42,10 @@ public class RabbitMQObjectCreator {
 	    try {
 	    	//Parse options
 	        cmd = parser.parse(options, args);
-	        String adminEndpoint = cmd.getOptionValue("endpoint");
-	        String username = cmd.getOptionValue("username");
-	        String password = cmd.getOptionValue("password");
-	        String configFile = cmd.getOptionValue("configFile");
+	        String adminEndpoint = cmd.getOptionValue(ENDPOINT_PROPERTY);
+	        String username = cmd.getOptionValue(USERNAME_PROPERTY);
+	        String password = cmd.getOptionValue(PASSWORD_PROPERTY);
+	        String configFile = cmd.getOptionValue(CONFIG_FILE_PROPERTY);
 	        	  
 	        //Read config file
 	        RabbitMQObjects rabbitMQObjects = OBJECT_MAPPER.readValue(new File(configFile), RabbitMQObjects.class);
@@ -76,26 +80,26 @@ public class RabbitMQObjectCreator {
 	private static Options buildOptions() {
 		Options options = new Options();
 		
-		Option adminEndpoint = Option.builder("e").longOpt("endpoint")
-		        						   .argName("endpoint")
+		Option adminEndpoint = Option.builder("e").longOpt(ENDPOINT_PROPERTY)
+		        						   .argName(ENDPOINT_PROPERTY)
 		        						   .hasArg()
 		        						   .required(true)
 		        						   .desc("Set RabbitMQ admin endpoint").build();
 		
-		Option username = Option.builder("u").longOpt("username")
-										   .argName("username")
+		Option username = Option.builder("u").longOpt(USERNAME_PROPERTY)
+										   .argName(USERNAME_PROPERTY)
 										   .hasArg()
 										   .required(true)
 										   .desc("Set RabbitMQ admin username").build();
 		
-		Option password = Option.builder("p").longOpt("password")
-										   .argName("password")
+		Option password = Option.builder("p").longOpt(PASSWORD_PROPERTY)
+										   .argName(PASSWORD_PROPERTY)
 										   .hasArg()
 										   .required(true)
 										   .desc("Set RabbitMQ admin password").build();
 		
-		Option configFile = Option.builder("c").longOpt("configFile")
-				   .argName("configFile")
+		Option configFile = Option.builder("c").longOpt(CONFIG_FILE_PROPERTY)
+				   .argName(CONFIG_FILE_PROPERTY)
 				   .hasArg()
 				   .required(true)
 				   .desc("Set config file containing objects").build();

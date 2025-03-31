@@ -18,11 +18,21 @@ public class ApplicationConfig {
 	private String queuePath = "/api/queues/%s/%s";
 	private String deadLetterQueuePath = "/api/queues/%s/%s";
 	private String bindingPath = "/api/bindings/%s/e/%s/q/%s";
+	private String vhostPath = "/api/vhosts/%s/";
+	
 	private String deadLetterPostfix = ".dead-letter";
 	private String reservedExchangeNamePrefix = "amq.";
 	
 	
-	
+	@NotBlank
+	public String getVhostPath() {
+		return vhostPath;
+	}
+
+	public void setVhostPath(String vhostPath) {
+		this.vhostPath = vhostPath;
+	}
+
 	@NotBlank		
 	public String getDeadLetterPostfix() {
 		return deadLetterPostfix;
