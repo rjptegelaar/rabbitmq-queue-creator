@@ -42,11 +42,11 @@
                 "name": {
                     "type": "string"
                 },
-                "queueName": {
-                    "type": "string"
+                "queue": {
+                    "$ref": "#/definitions/queue"
                 },
-                "exchangeName": {
-                    "type": "string"
+                "exchange": {
+                    "$ref": "#/definitions/exchange"
             	},
 				"routingKey": {
 	                "type": "string"
@@ -54,7 +54,41 @@
             },
 
             "required": [
-                "name", "queueName", "exchangeName"
+                "name", "queue", "exchange"
+            ]
+        },
+        "queue":{
+			"javaType": "nl.paultegelaar.rabbitmq.config.Queue",
+            "type": "object",
+			"properties": {
+                "name": {
+                    "type": "string"
+                },
+                "durable": {
+                    "type": "boolean"
+                }
+			},		
+            "required": [
+                "name", "durable"
+            ]
+        },
+        "exchange":{
+			"javaType": "nl.paultegelaar.rabbitmq.config.Exchange",
+            "type": "object",
+			"properties": {
+                "name": {                	
+                    "type": "string"
+                },
+                "exchangeType": {
+                    "type": "string",
+                    "enum": ["direct", "fanout", "headers", "topics", "x-jms-topic"]
+                },
+                "durable": {
+                    "type": "boolean"
+                }
+			},		
+            "required": [
+                "name", "exchangeType", "durable"
             ]
         }
     }

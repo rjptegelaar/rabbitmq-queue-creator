@@ -34,6 +34,8 @@ import org.json.JSONObject;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import nl.paultegelaar.rabbitmq.config.Binding;
+import nl.paultegelaar.rabbitmq.config.Exchange;
+import nl.paultegelaar.rabbitmq.config.Queue;
 import nl.paultegelaar.rabbitmq.config.RabbitMQObjects;
 import nl.paultegelaar.rabbitmq.config.VirtualHost;
 import nl.paultegelaar.rabbitmq.util.config.ApplicationConfig;
@@ -92,7 +94,7 @@ public class RabbitMQAdminClient {
 			throw new RabbitMQProvisioningException(violations.toString());
 		}
 
-		if (CollectionUtils.isNotEmpty(rabbitMQObjectsToCreate.getVirtualHosts())) {
+		if (CollectionUtils.isEmpty(rabbitMQObjectsToCreate.getVirtualHosts())) {
 			LOGGER.info("Configuration doesn't contain any virtual hosts");
 			return;
 		}
@@ -114,18 +116,18 @@ public class RabbitMQAdminClient {
 				List<Binding> bindings = virtualHost.getBindings();
 				for (Binding binding : bindings) {
 					LOGGER.info("Processing bindings");
-					if (StringUtils.isAnyBlank(binding.getExchangeName(), binding.getQueueName())) {
+					if (StringUtils.isAnyBlank(binding.getExchange().getName(), binding.getQueue().getName())) {
 							LOGGER.info("Exchangename and queuename must never be blank.");
 							continue;
-						}
+					}
 						
-						String exchangeName = binding.getExchangeName();
-						String queueName = binding.getQueueName();
-						String routingkey = binding.getRoutingKey();
+					Exchange exchange = binding.getExchange();
+					Queue queue = binding.getQueue();
+					String routingkey = binding.getRoutingKey();
+					boolean durable = binding.getQueue().getDurable();
 
-						LOGGER.info(String.format("Processing binding for queue with name: %s and exchange with name %s", queueName, exchangeName));
-
-						performManagementAPICalls(virtualHostName, exchangeName, queueName, routingkey);
+					LOGGER.info(String.format("Processing binding for queue with name: %s and exchange with name %s", queue.toString(), exchange.toString()));
+					performManagementAPICalls(virtualHostName, exchange, queue, routingkey);
 
 			}
 		}
@@ -141,22 +143,28 @@ public class RabbitMQAdminClient {
 	 * @param routingkey
 	 * @throws RabbitMQProvisioningException
 	 */
-	private void performManagementAPICalls(String virtualHostName, String exchangeName, String queueName, String routingkey) throws RabbitMQProvisioningException {
+	private void performManagementAPICalls(String virtualHostName, Exchange exchange, Queue queue, String routingkey) throws RabbitMQProvisioningException {
 		try {
+			
+			String queueName = queue.getName();
+			boolean queueDurability = queue.getDurable();
+			String exchangeName = exchange.getName();
+			String exchangeType = exchange.getExchangeType().name();
+			boolean exchangeDurability = exchange.getDurable();
+			
 			LOGGER.info("Check if vhost exists");
 			callRabbitMQManagementAPI(createVhostRequest(virtualHostName));
 
 			LOGGER.info("Creating queue");
-			callRabbitMQManagementAPI(
-					createQueueRequest(virtualHostName, queueName, exchangeName, true));
+			callRabbitMQManagementAPI(createQueueRequest(virtualHostName, queueName, exchangeName, queueDurability));
 			LOGGER.info("Creating dead letter queue");
-			callRabbitMQManagementAPI(createDeadLetterQueueRequest(virtualHostName, queueName));
+			callRabbitMQManagementAPI(createDeadLetterQueueRequest(virtualHostName, queueName, queueDurability));
 
 			if (StringUtils.startsWithIgnoreCase(exchangeName, applicationConfig.getReservedExchangeNamePrefix())) {
 				LOGGER.info(String.format("Reserved exchange name, skipping create for: %s", exchangeName));
 			} else {
 				LOGGER.info("Creating exchange");
-				callRabbitMQManagementAPI(createExchangeRequest(virtualHostName, exchangeName, "fanout"));
+				callRabbitMQManagementAPI(createExchangeRequest(virtualHostName, exchangeName, exchangeType, exchangeDurability));
 			}
 
 			LOGGER.info("Creating binding");
@@ -293,12 +301,13 @@ public class RabbitMQAdminClient {
 
 	}
 
-	private HttpUriRequest createExchangeRequest(String virtualhostName, String exchangeName, String exchangeType)
+	private HttpUriRequest createExchangeRequest(String virtualhostName, String exchangeName, String exchangeType, boolean durable)
 			throws UnsupportedEncodingException, URISyntaxException {
 
 		// Build json message
 		JSONObject json = new JSONObject();
 		json.put("type", exchangeType);
+		json.put("durable", durable);
 
 		// Add headers
 		Map<String, String> headers = new HashMap<>();
@@ -323,8 +332,7 @@ public class RabbitMQAdminClient {
 	 * @throws UnsupportedEncodingException
 	 * @throws URISyntaxException
 	 */
-	private HttpUriRequest createQueueRequest(String virtualhost, String queueName, String exchangeName,
-			boolean durable) throws UnsupportedEncodingException, URISyntaxException {
+	private HttpUriRequest createQueueRequest(String virtualhost, String queueName, String exchangeName, boolean durable) throws UnsupportedEncodingException, URISyntaxException {
 
 		// Build main json message
 		JSONObject json = new JSONObject();
@@ -360,12 +368,11 @@ public class RabbitMQAdminClient {
 	 * @throws UnsupportedEncodingException
 	 * @throws URISyntaxException
 	 */
-	private HttpUriRequest createDeadLetterQueueRequest(String virtualhost, String queueName)
-			throws UnsupportedEncodingException, URISyntaxException {
+	private HttpUriRequest createDeadLetterQueueRequest(String virtualhost, String queueName, boolean durable) throws UnsupportedEncodingException, URISyntaxException {
 
 		// Build json message
 		JSONObject json = new JSONObject();
-		json.put(DURABLE_PROPERTY, true);
+		json.put(DURABLE_PROPERTY, durable);
 		// Arguments is default empty
 		json.put(ARGUMENTS_PROPERTY, new JSONObject());
 
@@ -395,8 +402,7 @@ public class RabbitMQAdminClient {
 	 * @throws UnsupportedEncodingException
 	 * @throws URISyntaxException
 	 */
-	private HttpUriRequest createBindingRequest(String virtualhostName, String exchangeName, String queueName,
-			String routingKey) throws UnsupportedEncodingException, URISyntaxException {
+	private HttpUriRequest createBindingRequest(String virtualhostName, String exchangeName, String queueName, String routingKey) throws UnsupportedEncodingException, URISyntaxException {
 
 		// Build json message
 		JSONObject json = new JSONObject();

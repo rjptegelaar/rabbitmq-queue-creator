@@ -31,9 +31,7 @@ class TestRabbitMQAdminClient {
 		
 		
 		wireMockServer = new WireMockServer(35672);
-		wireMockServer.start();
-		
-		System.out.println("Wiremock running: " + wireMockServer.isRunning());
+		wireMockServer.start();			
 		
 		applicationConfig = new ApplicationConfig();
 		applicationConfig.setApiBaseURL("http://localhost:35672");
@@ -55,9 +53,7 @@ class TestRabbitMQAdminClient {
 	@Test
 	void testHappyFlow() throws IOException {
 		RabbitMQObjects rabbitMQObjects = OBJECT_MAPPER.readValue(new File("src/test/resources/rabbitmq-test-config.json"), RabbitMQObjects.class);
-		
-		
-		
+						
 		assertDoesNotThrow(() -> {
 			rabbitMQAdminClient.processRabbitMQConfig(rabbitMQObjects);     
 	    }, "Happy flow in exception");
