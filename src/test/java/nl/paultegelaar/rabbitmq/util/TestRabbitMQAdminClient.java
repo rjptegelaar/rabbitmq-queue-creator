@@ -1,7 +1,7 @@
 package nl.paultegelaar.rabbitmq.util;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,8 +10,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.core.exc.StreamReadException;
-import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 
@@ -58,6 +56,15 @@ class TestRabbitMQAdminClient {
 			rabbitMQAdminClient.processRabbitMQConfig(rabbitMQObjects);     
 	    }, "Happy flow in exception");
 		
+	}
+	
+	@Test
+	void testNoVhostFlow() throws IOException {
+		RabbitMQObjects rabbitMQObjects = OBJECT_MAPPER.readValue(new File("src/test/resources/rabbitmq-test-no-vhost-config.json"), RabbitMQObjects.class);
+						
+		assertThrows(RabbitMQProvisioningException.class, () -> {
+			rabbitMQAdminClient.processRabbitMQConfig(rabbitMQObjects); 
+	    });
 	}
 	
 }

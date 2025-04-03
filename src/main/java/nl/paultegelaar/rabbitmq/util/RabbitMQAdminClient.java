@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -30,6 +29,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -47,7 +48,7 @@ public class RabbitMQAdminClient {
 	private static final String ARGUMENTS_PROPERTY = "arguments";
 	private static final String CONTENT_TYPE_HEADER = "Content-Type";
 	private static final String AUTHORIZATION_HEADER = "Authorization";
-	private static final Logger LOGGER = Logger.getLogger(RabbitMQAdminClient.class.getName());
+	private static final Logger LOGGER = LoggerFactory.getLogger(RabbitMQAdminClient.class);
 
 	private final ApplicationConfig applicationConfig;
 	private final CloseableHttpClient httpClient;
@@ -87,7 +88,7 @@ public class RabbitMQAdminClient {
 	 * @throws RabbitMQProvisioningException
 	 */
 	public void processRabbitMQConfig(RabbitMQObjects rabbitMQObjectsToCreate) throws RabbitMQProvisioningException {
-		LOGGER.info(String.format("Processing new RabbitMQ configration: %s", rabbitMQObjectsToCreate.getConfigName()));
+		LOGGER.info("Processing new RabbitMQ configration: {}", rabbitMQObjectsToCreate.getConfigName());
 		Set<ConstraintViolation<RabbitMQObjects>> violations = Validation.buildDefaultValidatorFactory().getValidator()
 				.validate(rabbitMQObjectsToCreate);
 		if (CollectionUtils.isNotEmpty(violations)) {
@@ -95,7 +96,7 @@ public class RabbitMQAdminClient {
 		}
 
 		if (CollectionUtils.isEmpty(rabbitMQObjectsToCreate.getVirtualHosts())) {
-			LOGGER.info("Configuration doesn't contain any virtual hosts");
+			LOGGER.error("Configuration doesn't contain any virtual hosts");
 			return;
 		}
 
@@ -106,27 +107,26 @@ public class RabbitMQAdminClient {
 			// Check the name, it is needed to create all the underlying objects, also check
 			// if there are any bindings
 			if (StringUtils.isBlank(virtualHost.getName())|| CollectionUtils.isEmpty(virtualHost.getBindings())) {
-					LOGGER.info("Configuration virtualhost name cannot be blank and virutalhost must contain bindings.");
+					LOGGER.info("Configuration virtualhost name cannot be blank and virutalhost must contain bindings, skipping entry.");
 					continue;
 				}
 
 				String virtualHostName = virtualHost.getName();
 
-				LOGGER.info(String.format("Processing virtualhost with name: %s", virtualHostName));
+				LOGGER.info("Processing virtualhost with name: {}", virtualHostName);
 				List<Binding> bindings = virtualHost.getBindings();
 				for (Binding binding : bindings) {
 					LOGGER.info("Processing bindings");
 					if (StringUtils.isAnyBlank(binding.getExchange().getName(), binding.getQueue().getName())) {
-							LOGGER.info("Exchangename and queuename must never be blank.");
+							LOGGER.info("Exchangename and queuename must never be blank, skipping entry");
 							continue;
 					}
 						
 					Exchange exchange = binding.getExchange();
 					Queue queue = binding.getQueue();
 					String routingkey = binding.getRoutingKey();
-					boolean durable = binding.getQueue().getDurable();
 
-					LOGGER.info(String.format("Processing binding for queue with name: %s and exchange with name %s", queue.toString(), exchange.toString()));
+					LOGGER.info("Processing binding for queue with name: {} and exchange with name {}", queue.toString(), exchange.toString());
 					performManagementAPICalls(virtualHostName, exchange, queue, routingkey);
 
 			}
@@ -134,12 +134,14 @@ public class RabbitMQAdminClient {
 
 	}
 
+
+	
 	/**
 	 * Perform calls to RabbitMQ Management API
 	 * 
 	 * @param virtualHostName
-	 * @param exchangeName
-	 * @param queueName
+	 * @param exchange
+	 * @param queue
 	 * @param routingkey
 	 * @throws RabbitMQProvisioningException
 	 */
@@ -161,7 +163,7 @@ public class RabbitMQAdminClient {
 			callRabbitMQManagementAPI(createDeadLetterQueueRequest(virtualHostName, queueName, queueDurability));
 
 			if (StringUtils.startsWithIgnoreCase(exchangeName, applicationConfig.getReservedExchangeNamePrefix())) {
-				LOGGER.info(String.format("Reserved exchange name, skipping create for: %s", exchangeName));
+				LOGGER.info("Reserved exchange name, skipping create for: {}", exchangeName);
 			} else {
 				LOGGER.info("Creating exchange");
 				callRabbitMQManagementAPI(createExchangeRequest(virtualHostName, exchangeName, exchangeType, exchangeDurability));
@@ -184,7 +186,7 @@ public class RabbitMQAdminClient {
 	 * @throws RabbitMQProvisioningException
 	 */
 	private void callRabbitMQManagementAPI(HttpUriRequest request) throws IOException, RabbitMQProvisioningException {
-		LOGGER.info(String.format("Sending request to: %s", request.getURI().toString()));
+		LOGGER.info("Sending request to: {}", request.getURI().toString());
 
 		CloseableHttpResponse response = httpClient.execute(request);
 
@@ -197,16 +199,16 @@ public class RabbitMQAdminClient {
 		if (response.getEntity() != null) {
 			stringResponse = EntityUtils.toString(response.getEntity());
 			if (StringUtils.isNotBlank(stringResponse)) {
-				LOGGER.info(String.format("Parsing response: %s", stringResponse));
+				LOGGER.info("Parsing response: {}", stringResponse);
 				new JSONObject(stringResponse);
 			}
 		}
 		// stupid simple validation of response code
 		if (statusCode > 199 && statusCode < 300) {
-			LOGGER.info(String.format("Succesfully created RabbitMQ object, received HTTP code: %s", statusCode));
+			LOGGER.info("Succesfully created RabbitMQ object, received HTTP code: {}", statusCode);
 		} else {
-			throw new RabbitMQProvisioningException(
-					String.format("Received invalid http response code: %s, body %s", statusCode, stringResponse));
+			LOGGER.error("Received invalid http response code: {}, body {}", statusCode, stringResponse);
+			throw new RabbitMQProvisioningException(String.format("Received invalid http response code: %s, body %s", statusCode, stringResponse));
 		}
 	}
 
@@ -223,7 +225,7 @@ public class RabbitMQAdminClient {
 			throws UnsupportedEncodingException {
 		HttpPut request = new HttpPut(url);
 
-		// Copy haeders to request
+		// Copy headers to request
 		if (MapUtils.isNotEmpty(headers)) {
 			for (Map.Entry<String, String> entry : headers.entrySet()) {
 				request.addHeader(entry.getKey(), entry.getValue());
@@ -307,7 +309,7 @@ public class RabbitMQAdminClient {
 		// Build json message
 		JSONObject json = new JSONObject();
 		json.put("type", exchangeType);
-		json.put("durable", durable);
+		json.put(DURABLE_PROPERTY, durable);
 
 		// Add headers
 		Map<String, String> headers = new HashMap<>();

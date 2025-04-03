@@ -55,6 +55,16 @@
 			<artifactId>commons-cli</artifactId>
 			<version>1.9.0</version>
 		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.17</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>2.0.17</version>
+		</dependency>
 
 
 		<!--Test deps-->
@@ -106,7 +116,8 @@
 			</build>
 		</profile>
 		<profile>
-			<id>executable-jar-build</id><build>
+			<id>executable-jar-build</id>
+			<build>
 				<finalName>rabbitmq-queue-creator</finalName>
 				<plugins>
 

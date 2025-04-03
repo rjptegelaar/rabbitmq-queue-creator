@@ -1,0 +1,11 @@
+{
+    "request": {
+        "method": "GET",
+        "url": "/api/vhosts/dummy/"
+    },
+    "response": {
+        "status": 404,
+		"body": "{\"not\": \"good at all\"}"
+		
+    }
+}

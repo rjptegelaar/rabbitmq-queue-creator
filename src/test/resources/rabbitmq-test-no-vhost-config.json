@@ -1,8 +1,8 @@
 
 {
-    "configName": "Test config",
+    "configName": "Test config no vhost",
     "virtualHosts": [{
-            "name": "/",
+            "name": "dummy",
             "bindings": [{
                     "name": "test-binding1",
 					"queue": {
