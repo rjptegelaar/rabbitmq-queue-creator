@@ -48,6 +48,12 @@ class TestRabbitMQAdminClient {
 		wireMockServer.stop();
 	}
 	
+	
+	/**
+	 * Test the happy flow
+	 * 
+	 * @throws IOException
+	 */
 	@Test
 	void testHappyFlow() throws IOException {
 		RabbitMQObjects rabbitMQObjects = OBJECT_MAPPER.readValue(new File("src/test/resources/rabbitmq-test-config.json"), RabbitMQObjects.class);
@@ -58,9 +64,44 @@ class TestRabbitMQAdminClient {
 		
 	}
 	
+	/**
+	 * Test if reserved exchange names are correctly skipped
+	 * 
+	 * @throws IOException
+	 */
+	@Test
+	void testReservedExchangeName() throws IOException {
+		RabbitMQObjects rabbitMQObjects = OBJECT_MAPPER.readValue(new File("src/test/resources/rabbitmq-test-reserverd-exchange-config.json"), RabbitMQObjects.class);
+						
+		assertDoesNotThrow(() -> {
+			rabbitMQAdminClient.processRabbitMQConfig(rabbitMQObjects);     
+	    }, "Reserved exchangename flow in exception");
+		
+	}
+	
+	/**
+	 * Test if non-existant VHost leads to controlled exception
+	 * 
+	 * @throws IOException
+	 */
 	@Test
 	void testNoVhostFlow() throws IOException {
 		RabbitMQObjects rabbitMQObjects = OBJECT_MAPPER.readValue(new File("src/test/resources/rabbitmq-test-no-vhost-config.json"), RabbitMQObjects.class);
+						
+		assertThrows(RabbitMQProvisioningException.class, () -> {
+			rabbitMQAdminClient.processRabbitMQConfig(rabbitMQObjects); 
+	    });
+	}
+	
+	
+	/**
+	 * Test if bad config leads to 
+	 * 
+	 * @throws IOException
+	 */
+	@Test
+	void testBadConfig() throws IOException {
+		RabbitMQObjects rabbitMQObjects = OBJECT_MAPPER.readValue(new File("src/test/resources/rabbitmq-test-bad-config.json"), RabbitMQObjects.class);
 						
 		assertThrows(RabbitMQProvisioningException.class, () -> {
 			rabbitMQAdminClient.processRabbitMQConfig(rabbitMQObjects); 

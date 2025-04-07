@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -54,6 +55,7 @@ public class RabbitMQAdminClient {
 	private final CloseableHttpClient httpClient;
 
 	public RabbitMQAdminClient(ApplicationConfig applicationConfig) throws RabbitMQProvisioningException {
+		
 		Set<ConstraintViolation<ApplicationConfig>> violations = Validation.buildDefaultValidatorFactory()
 				.getValidator().validate(applicationConfig);
 		if (CollectionUtils.isNotEmpty(violations)) {
@@ -92,6 +94,7 @@ public class RabbitMQAdminClient {
 		Set<ConstraintViolation<RabbitMQObjects>> violations = Validation.buildDefaultValidatorFactory().getValidator()
 				.validate(rabbitMQObjectsToCreate);
 		if (CollectionUtils.isNotEmpty(violations)) {
+			LOGGER.error("Configuration is not valid: {}", violations);
 			throw new RabbitMQProvisioningException(violations.toString());
 		}
 
@@ -116,6 +119,7 @@ public class RabbitMQAdminClient {
 				LOGGER.info("Processing virtualhost with name: {}", virtualHostName);
 				List<Binding> bindings = virtualHost.getBindings();
 				for (Binding binding : bindings) {
+					
 					LOGGER.info("Processing bindings");
 					if (StringUtils.isAnyBlank(binding.getExchange().getName(), binding.getQueue().getName())) {
 							LOGGER.info("Exchangename and queuename must never be blank, skipping entry");
@@ -125,8 +129,11 @@ public class RabbitMQAdminClient {
 					Exchange exchange = binding.getExchange();
 					Queue queue = binding.getQueue();
 					String routingkey = binding.getRoutingKey();
+					
+					
+					
 
-					LOGGER.info("Processing binding for queue with name: {} and exchange with name {}", queue.toString(), exchange.toString());
+					LOGGER.info("Processing binding for queue with name: {} and exchange with name {}", queue.getName(), exchange.getName());
 					performManagementAPICalls(virtualHostName, exchange, queue, routingkey);
 
 			}
@@ -151,22 +158,28 @@ public class RabbitMQAdminClient {
 			String queueName = queue.getName();
 			boolean queueDurability = queue.getDurable();
 			String exchangeName = exchange.getName();
-			String exchangeType = exchange.getExchangeType().name();
+			String exchangeType = exchange.getExchangeType().value();
 			boolean exchangeDurability = exchange.getDurable();
 			
 			LOGGER.info("Check if vhost exists");
 			callRabbitMQManagementAPI(createVhostRequest(virtualHostName));
 
 			LOGGER.info("Creating queue");
-			callRabbitMQManagementAPI(createQueueRequest(virtualHostName, queueName, exchangeName, queueDurability));
-			LOGGER.info("Creating dead letter queue");
-			callRabbitMQManagementAPI(createDeadLetterQueueRequest(virtualHostName, queueName, queueDurability));
+			callRabbitMQManagementAPI(createQueueRequest(virtualHostName, exchangeName, queue));
+			
+			if(BooleanUtils.isTrue(queue.getCreateDLQ())) {
+				LOGGER.info("Creating dead letter queue for queue: {}", queueName);
+				callRabbitMQManagementAPI(createDeadLetterQueueRequest(virtualHostName, queueName, queueDurability));
+			}else {
+				LOGGER.info("Not creating a dead letter queue for queue: {}", queueName);
+			}
 
 			if (StringUtils.startsWithIgnoreCase(exchangeName, applicationConfig.getReservedExchangeNamePrefix())) {
-				LOGGER.info("Reserved exchange name, skipping create for: {}", exchangeName);
+				LOGGER.info("Reserved exchange name, skipping create for: {} and checking if it exists", exchangeName);
+				callRabbitMQManagementAPI(createGetExchangeRequest(virtualHostName, exchangeName));
 			} else {
 				LOGGER.info("Creating exchange");
-				callRabbitMQManagementAPI(createExchangeRequest(virtualHostName, exchangeName, exchangeType, exchangeDurability));
+				callRabbitMQManagementAPI(createUpsertExchangeRequest(virtualHostName, exchangeName, exchangeType, exchangeDurability));
 			}
 
 			LOGGER.info("Creating binding");
@@ -186,7 +199,7 @@ public class RabbitMQAdminClient {
 	 * @throws RabbitMQProvisioningException
 	 */
 	private void callRabbitMQManagementAPI(HttpUriRequest request) throws IOException, RabbitMQProvisioningException {
-		LOGGER.info("Sending request to: {}", request.getURI().toString());
+		LOGGER.info("Sending request to: {}", request.getURI());
 
 		CloseableHttpResponse response = httpClient.execute(request);
 
@@ -303,7 +316,18 @@ public class RabbitMQAdminClient {
 
 	}
 
-	private HttpUriRequest createExchangeRequest(String virtualhostName, String exchangeName, String exchangeType, boolean durable)
+	/**
+	 * Create or update a new exchange within the specified virtual host
+	 * 
+	 * @param virtualhostName
+	 * @param exchangeName
+	 * @param exchangeType
+	 * @param durable
+	 * @return HttpPut request containing json body containing type and durability
+	 * @throws UnsupportedEncodingException
+	 * @throws URISyntaxException
+	 */
+	private HttpUriRequest createUpsertExchangeRequest(String virtualhostName, String exchangeName, String exchangeType, boolean durable)
 			throws UnsupportedEncodingException, URISyntaxException {
 
 		// Build json message
@@ -328,21 +352,29 @@ public class RabbitMQAdminClient {
 	 * Create a PUT request to create or update queue.
 	 * 
 	 * @param virtualhost
-	 * @param queueName
+	 * @param queue
 	 * @param exchangeName
 	 * @return HttpPut containing the body, URL and headers needed to create a queue
 	 * @throws UnsupportedEncodingException
 	 * @throws URISyntaxException
 	 */
-	private HttpUriRequest createQueueRequest(String virtualhost, String queueName, String exchangeName, boolean durable) throws UnsupportedEncodingException, URISyntaxException {
+	private HttpUriRequest createQueueRequest(String virtualhost, String exchangeName, Queue queue) throws UnsupportedEncodingException, URISyntaxException {
 
 		// Build main json message
 		JSONObject json = new JSONObject();
-		json.put(DURABLE_PROPERTY, durable);
+		json.put(DURABLE_PROPERTY, queue.getDurable());
 		// Build arguments json object
 		JSONObject arguments = new JSONObject();
-		arguments.put("x-dead-letter-exchange", exchangeName);
-		arguments.put("x-dead-letter-routing-key", queueName.concat(applicationConfig.getDeadLetterPostfix()));
+		
+		if(BooleanUtils.isTrue(queue.getCreateDLQ())) {
+			arguments.put("x-dead-letter-exchange", exchangeName);
+			arguments.put("x-dead-letter-routing-key", queue.getName().concat(applicationConfig.getDeadLetterPostfix()));
+		}
+		
+		if(queue.getType()!=null) {
+			arguments.put("x-queue-type", queue.getType().value());
+		}
+
 		// Add arguments to main json
 		json.put(ARGUMENTS_PROPERTY, arguments);
 
@@ -354,7 +386,7 @@ public class RabbitMQAdminClient {
 		// Build URL
 		URI fullUrl = createURL(applicationConfig.getApiBaseURL(), applicationConfig.getQueuePath(),
 				URLEncoder.encode(virtualhost, StandardCharsets.UTF_8),
-				URLEncoder.encode(queueName, StandardCharsets.UTF_8));
+				URLEncoder.encode(queue.getName(), StandardCharsets.UTF_8));
 
 		// Return with combined URL, headers and json body
 		return createPutRequest(json.toString(), headers, fullUrl);
@@ -393,7 +425,7 @@ public class RabbitMQAdminClient {
 	}
 
 	/**
-	 * Create a POST request to create a binding.
+	 * Create a POST request to create a binding, it is a combination of the queue, the exchanage, the vhost and a routingkey to which message can be routed directly.
 	 * 
 	 * @param virtualhostName
 	 * @param exchangeName
@@ -445,6 +477,21 @@ public class RabbitMQAdminClient {
 
 		return createGetRequest(headers, fullUrl);
 	}
+	
+	private HttpUriRequest createGetExchangeRequest(String virtualhostName, String exchangeName) throws URISyntaxException {
+
+		// Add headers
+		Map<String, String> headers = new HashMap<>();
+		headers.put(AUTHORIZATION_HEADER, buildBasicAuthCredentials());
+
+		// Build URL
+		URI fullUrl = createURL(applicationConfig.getApiBaseURL(), applicationConfig.getExchangePath(),
+				URLEncoder.encode(virtualhostName, StandardCharsets.UTF_8), exchangeName);
+
+		// Return with combined URL
+		return createGetRequest(headers, fullUrl);
+	}
+	
 
 	/**
 	 * Create URL based on a baseURL a path and any parameters

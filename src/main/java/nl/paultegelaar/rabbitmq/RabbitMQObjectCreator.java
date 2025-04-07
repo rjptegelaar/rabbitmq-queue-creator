@@ -11,6 +11,8 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -26,6 +28,7 @@ public class RabbitMQObjectCreator {
 	private static final String USERNAME_PROPERTY = "username";
 	private static final String ENDPOINT_PROPERTY = "endpoint";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private static final Logger LOGGER = LoggerFactory.getLogger(RabbitMQObjectCreator.class);
 	
 
 	public static void main(String[] args) {
@@ -63,20 +66,25 @@ public class RabbitMQObjectCreator {
 			rabbitMQAdminClient.processRabbitMQConfig(rabbitMQObjects);
 	        
 	    } catch (ParseException e) {
-	        System.out.println(e.getMessage());
+	    	LOGGER.info("Exception parsing config JSON: {}", e.getMessage());
 	        helper.printHelp("Usage:", options);
 	        System.exit(0);
 	    }  catch (IOException e) {
-	    	System.out.println("Unable to read config file: " + e.getMessage());
+	    	LOGGER.info("Unable to read config file: {}", e.getMessage());
 	        System.exit(0);
 		} catch (RabbitMQProvisioningException e) {
-			System.out.println("Error while running RabbitMQ provisioning: " + e.getMessage());
+			LOGGER.info("Error while running RabbitMQ provisioning: {}", e.getMessage());
 	        System.exit(0);
 		}
 	    
 		
 	}
 
+	/**
+	 * Builds all options used by main method.
+	 * 
+	 * @return Options
+	 */
 	private static Options buildOptions() {
 		Options options = new Options();
 		

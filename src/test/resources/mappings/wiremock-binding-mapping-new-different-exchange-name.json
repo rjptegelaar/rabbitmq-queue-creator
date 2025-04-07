@@ -1,0 +1,9 @@
+{
+    "request": {
+        "method": "POST",
+        "url": "/api/bindings/%2F/e/amq.default/q/queue1"
+    },
+    "response": {
+        "status": 201
+    }
+}

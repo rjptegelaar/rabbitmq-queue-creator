@@ -1,6 +1,5 @@
-
 {
-    "configName": "Test config no vhost",
+    "configName": "Test config with non existing vhost",
     "virtualHosts": [{
             "name": "dummy",
             "bindings": [{

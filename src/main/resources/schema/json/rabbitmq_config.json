@@ -1,6 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "javaType": "nl.paultegelaar.rabbitmq.config.RabbitMQObjects",
+	"description" : "This is an object designed to hold configurations of RabbitMQ components like vhosts, exchanges, queues and bindings.",
     "type": "object",
     "properties": {
         "configName": {
@@ -21,6 +22,7 @@
     "definitions": {
         "virtualHosts": {
             "javaType": "nl.paultegelaar.rabbitmq.config.VirtualHost",
+			"description" : "A configuration can hold multiple vhosts, vhosts are RabbitMQ's multitenant configuration holders much like vhosts in Apache. They can hold multiple bindings objects, which in turn bind queues, exchanges and routingkey's.",
             "type": "object",
             "properties": {
                 "name": {
@@ -59,6 +61,7 @@
         },
         "queue":{
 			"javaType": "nl.paultegelaar.rabbitmq.config.Queue",
+			"description" : "This config object is used to create a queue. You can specify a name, if the queue name and if a dead letter queue for this queue must be created.",
             "type": "object",
 			"properties": {
                 "name": {
@@ -66,7 +69,14 @@
                 },
                 "durable": {
                     "type": "boolean"
-                }
+                },
+				"createDLQ": {
+					"type": "boolean"
+				},
+				"type": {
+					"type": "string",
+					"enum": ["quorum", "stream", "classic"]
+				}
 			},		
             "required": [
                 "name", "durable"

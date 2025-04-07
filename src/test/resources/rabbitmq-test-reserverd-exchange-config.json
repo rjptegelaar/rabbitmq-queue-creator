@@ -1,17 +1,16 @@
 
 {
-    "configName": "Test config",
+    "configName": "Test config reserved exchange name",
     "virtualHosts": [{
             "name": "/",
             "bindings": [{
                     "name": "test-binding1",
 					"queue": {
 						"name": "queue1",
-						"durable": true,
-						"createDLQ": true
+						"durable": true
 					},
                     "exchange": {
-						"name": "amqp.default",
+						"name": "amq.default",
 						"durable": true,
 						"exchangeType": "fanout"
 					}
@@ -19,12 +18,10 @@
                     "name": "test-binding2",
                     "queue": {
 						"name": "queue2",
-						"durable": false,
-						"createDLQ": false,
-						"type": "quorum"
+						"durable": true
 					},
                     "exchange": {
-						"name": "amqp.not.so.default",
+						"name": "amq.not.so.default",
 						"durable": true,
 						"exchangeType": "fanout"
 					},

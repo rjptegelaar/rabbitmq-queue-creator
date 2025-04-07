@@ -1,0 +1,10 @@
+{
+    "request": {
+        "method": "GET",
+        "url": "/api/exchanges/%2F/amq.default"
+    },
+    "response": {
+        "status": 200,
+		"body": "{\"not\": \"important\"}"
+    }
+}
